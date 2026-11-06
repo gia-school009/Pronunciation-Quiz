@@ -1,0 +1,350 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Odd Sound Out</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Lexend:wght@400;500;600&family=Noto+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: one centered column. A start card, then one question at a time (four tappable word rows), then a results card with a missed-question review. */
+:root {
+  --bg: #F1F4FA;
+  --surface: #FFFFFF;
+  --ink: #14203A;
+  --muted: #55627F;
+  --line: #D3DBEA;
+  --accent: #2646D9;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E3E8FB;
+  --good: #12794A;
+  --good-bg: #DAF2E4;
+  --bad: #B3261E;
+  --bad-bg: #FBE2E0;
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Lexend', 'Segoe UI', system-ui, sans-serif;
+  --font-ipa: 'Noto Sans', 'Segoe UI', 'Lucida Sans Unicode', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1324; --surface: #172039; --ink: #E8EDFB; --muted: #9AA7C7; --line: #2A3659;
+    --accent: #7C9BFF; --accent-ink: #0E1324; --accent-soft: #232E55;
+    --good: #5FD39A; --good-bg: #153A2B; --bad: #FF8A80; --bad-bg: #4A1F22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1324; --surface: #172039; --ink: #E8EDFB; --muted: #9AA7C7; --line: #2A3659;
+  --accent: #7C9BFF; --accent-ink: #0E1324; --accent-soft: #232E55;
+  --good: #5FD39A; --good-bg: #153A2B; --bad: #FF8A80; --bad-bg: #4A1F22;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+p { margin: 0; }
+.ipa { font-family: var(--font-ipa); font-weight: 600; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+/* start */
+.start h1 { font-size: clamp(2.4rem, 9vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; }
+.start h1 .odd { color: var(--accent); }
+.sample { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sample span { text-align: center; padding: 10px 4px; border: 1px solid var(--line); border-radius: 10px; font-weight: 500; }
+.sample span.is-odd { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 14px; color: var(--muted); }
+.field input { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+
+.btn { border: 0; border-radius: 12px; padding: 14px 22px; font-weight: 600; background: var(--accent); color: var(--accent-ink); align-self: flex-start; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+
+/* quiz */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.count { font-weight: 600; }
+.score-pill { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 4px 12px; font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.3s ease; }
+.prompt { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.4rem, 5vw, 1.9rem); letter-spacing: -0.01em; }
+.hint { color: var(--muted); font-size: 14px; }
+
+.options { display: flex; flex-direction: column; gap: 10px; }
+.row { display: grid; grid-template-columns: 48px 1fr; gap: 8px; }
+.row.no-speech { grid-template-columns: 1fr; }
+.listen { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; display: grid; place-items: center; color: var(--accent); }
+.listen:hover { background: var(--accent-soft); }
+.listen svg { width: 20px; height: 20px; }
+.opt { display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; min-width: 0; }
+.opt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.opt .num { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--bg); display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.opt .word { font-size: 1.3rem; font-weight: 500; overflow-wrap: anywhere; }
+.opt:disabled { cursor: default; }
+.opt.correct { border-color: var(--good); background: var(--good-bg); }
+.opt.correct .num { background: var(--good); color: var(--surface); }
+.opt.wrong { border-color: var(--bad); background: var(--bad-bg); }
+.opt.wrong .num { background: var(--bad); color: var(--surface); }
+.opt.dim { opacity: 0.6; }
+
+.feedback { border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.feedback.good { background: var(--good-bg); }
+.feedback.bad { background: var(--bad-bg); }
+.feedback strong { font-family: var(--font-display); font-size: 1.15rem; }
+.feedback.good strong { color: var(--good); }
+.feedback.bad strong { color: var(--bad); }
+.nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.nav .keys { font-size: 13px; color: var(--muted); }
+
+/* results */
+.big { font-family: var(--font-display); font-weight: 800; font-size: clamp(3rem, 14vw, 5rem); line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.big small { font-size: 0.4em; color: var(--muted); font-weight: 600; }
+.review { display: flex; flex-direction: column; gap: 8px; }
+.review h2 { font-size: 1.2rem; }
+.miss { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.miss .words { font-weight: 500; overflow-wrap: anywhere; }
+.miss .tag { font-size: 14px; color: var(--muted); }
+.miss .tag b { color: var(--good); font-weight: 600; }
+.miss .tag s { color: var(--bad); text-decoration-thickness: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+@media (max-width: 420px) { .card { padding: 18px; } .sample { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<main class="wrap">
+  <section id="start" class="card start">
+    <span class="eyebrow">Pronunciation practice</span>
+    <h1>Odd Sound <span class="odd">Out</span></h1>
+    <p>Each question shows four words. Three share the same sound. Pick the one that sounds different. Say the words out loud, or tap the speaker to hear them.</p>
+    <div class="sample" aria-label="Example question">
+      <span>paid</span><span class="is-odd">said</span><span>mail</span><span>jail</span>
+    </div>
+    <p class="hint">Example: <b>said</b> has the sound <span class="ipa">/ɛ/</span>. The other three have <span class="ipa">/eɪ/</span>.</p>
+    <div class="field">
+      <label for="name">Your name (optional)</label>
+      <input id="name" type="text" autocomplete="off" maxlength="40" placeholder="Type your name">
+    </div>
+    <button class="btn" id="go" type="button">Start the 20 questions</button>
+  </section>
+
+  <section id="quiz" class="card" hidden>
+    <div class="topbar">
+      <span class="count" id="count">Question 1 of 20</span>
+      <span class="score-pill" id="score">Score 0</span>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="20" id="bar"><i id="fill"></i></div>
+    <h2 class="prompt">Which word has a different sound?</h2>
+    <div class="options" id="options"></div>
+    <div id="feedback" aria-live="polite"></div>
+    <div class="nav">
+      <span class="keys">Keys 1 to 4 to answer, Enter for next</span>
+      <button class="btn" id="next" type="button" hidden>Next question</button>
+    </div>
+  </section>
+
+  <section id="result" class="card" hidden>
+    <span class="eyebrow" id="who">Your result</span>
+    <div class="big" id="final"></div>
+    <p id="msg"></p>
+    <div class="review" id="review"></div>
+    <button class="btn" id="again" type="button">Try again</button>
+  </section>
+</main>
+
+<script>
+var Q = [
+  { w: ["paid","said","mail","jail"], a: 1, why: "<b>said</b> has <span class='ipa'>/ɛ/</span> as in “bed”. The others have <span class='ipa'>/eɪ/</span> as in “day”." },
+  { w: ["sit","bit","seat","hit"], a: 2, why: "<b>seat</b> has the long <span class='ipa'>/iː/</span>. The others have the short <span class='ipa'>/ɪ/</span>." },
+  { w: ["make","cake","back","take"], a: 2, why: "<b>back</b> has <span class='ipa'>/æ/</span>. The others have <span class='ipa'>/eɪ/</span>." },
+  { w: ["food","moon","book","soon"], a: 2, why: "<b>book</b> has the short <span class='ipa'>/ʊ/</span>. The others have the long <span class='ipa'>/uː/</span>." },
+  { w: ["cut","but","put","nut"], a: 2, why: "<b>put</b> has <span class='ipa'>/ʊ/</span>. The others have <span class='ipa'>/ʌ/</span>." },
+  { w: ["boat","coat","cost","note"], a: 2, why: "<b>cost</b> has a short <span class='ipa'>/ɒ/</span> sound. The others have <span class='ipa'>/oʊ/</span>." },
+  { w: ["cow","now","show","how"], a: 2, why: "<b>show</b> has <span class='ipa'>/oʊ/</span>. The others have <span class='ipa'>/aʊ/</span>." },
+  { w: ["bird","word","hurt","hard"], a: 3, why: "<b>hard</b> has <span class='ipa'>/ɑː/</span>. The others have <span class='ipa'>/ɜː/</span>." },
+  { w: ["cheese","chair","chef","church"], a: 2, why: "<b>chef</b> starts with <span class='ipa'>/ʃ/</span> (“sh”). The others start with <span class='ipa'>/tʃ/</span> (“ch”)." },
+  { w: ["think","this","thank","thing"], a: 1, why: "<b>this</b> starts with the voiced <span class='ipa'>/ð/</span>. The others start with the voiceless <span class='ipa'>/θ/</span>." },
+  { w: ["city","cat","cent","cell"], a: 1, why: "<b>cat</b> starts with <span class='ipa'>/k/</span>. The others start with <span class='ipa'>/s/</span>." },
+  { w: ["gym","give","game","go"], a: 0, why: "<b>gym</b> starts with <span class='ipa'>/dʒ/</span>. The others start with <span class='ipa'>/g/</span>." },
+  { w: ["knee","know","king","knife"], a: 2, why: "<b>king</b> starts with <span class='ipa'>/k/</span>. In the others the k is silent and the word starts with <span class='ipa'>/n/</span>." },
+  { w: ["walked","played","called","cleaned"], a: 0, why: "<b>walked</b> ends with <span class='ipa'>/t/</span>. The others end with <span class='ipa'>/d/</span>." },
+  { w: ["wanted","needed","played","ended"], a: 2, why: "<b>played</b> ends with <span class='ipa'>/d/</span>. The others end with an extra syllable <span class='ipa'>/ɪd/</span>." },
+  { w: ["books","cats","dogs","maps"], a: 2, why: "<b>dogs</b> ends with <span class='ipa'>/z/</span>. The others end with <span class='ipa'>/s/</span>." },
+  { w: ["high","night","light","right"], a: 0, why: "<b>high</b> has no <span class='ipa'>/t/</span> at the end. The others all end with <span class='ipa'>/t/</span>." },
+  { w: ["phone","photo","laugh","pen"], a: 3, why: "<b>pen</b> starts with <span class='ipa'>/p/</span>. The others have the <span class='ipa'>/f/</span> sound." },
+  { w: ["tough","rough","cough","enough"], a: 2, why: "<b>cough</b> has <span class='ipa'>/ɒ/</span> before the <span class='ipa'>/f/</span>. The others have <span class='ipa'>/ʌ/</span>." },
+  { w: ["love","move","glove","come"], a: 1, why: "<b>move</b> has <span class='ipa'>/uː/</span>. The others have <span class='ipa'>/ʌ/</span>." }
+];
+
+var el = function (id) { return document.getElementById(id); };
+var state = { i: 0, score: 0, answered: false, order: [], picks: [] };
+var canSpeak = false;
+try { canSpeak = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function'; } catch (e) {}
+
+var SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+
+function shuffle(a) {
+  a = a.slice();
+  for (var k = a.length - 1; k > 0; k--) {
+    var j = Math.floor(Math.random() * (k + 1));
+    var t = a[k]; a[k] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function speak(word) {
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(word);
+    u.lang = 'en-US';
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function show(which) {
+  ['start', 'quiz', 'result'].forEach(function (id) { el(id).hidden = (id !== which); });
+  window.scrollTo(0, 0);
+}
+
+function begin() {
+  state.i = 0; state.score = 0; state.answered = false; state.picks = [];
+  state.order = Q.map(function () { return shuffle([0, 1, 2, 3]); });
+  show('quiz');
+  render();
+}
+
+function render() {
+  var q = Q[state.i];
+  state.answered = false;
+  el('count').textContent = 'Question ' + (state.i + 1) + ' of ' + Q.length;
+  el('score').textContent = 'Score ' + state.score;
+  el('fill').style.width = (state.i / Q.length * 100) + '%';
+  el('bar').setAttribute('aria-valuenow', state.i);
+  el('feedback').innerHTML = '';
+  el('next').hidden = true;
+
+  var box = el('options');
+  box.innerHTML = '';
+  state.order[state.i].forEach(function (wi, pos) {
+    var row = document.createElement('div');
+    row.className = 'row' + (canSpeak ? '' : ' no-speech');
+    if (canSpeak) {
+      var l = document.createElement('button');
+      l.type = 'button';
+      l.className = 'listen';
+      l.setAttribute('aria-label', 'Hear the word ' + q.w[wi]);
+      l.innerHTML = SPEAKER;
+      l.addEventListener('click', function () { speak(q.w[wi]); });
+      row.appendChild(l);
+    }
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt';
+    b.dataset.wi = wi;
+    b.innerHTML = '<span class="num">' + (pos + 1) + '</span><span class="word"></span>';
+    b.querySelector('.word').textContent = q.w[wi];
+    b.addEventListener('click', function () { choose(wi); });
+    row.appendChild(b);
+    box.appendChild(row);
+  });
+}
+
+function choose(wi) {
+  if (state.answered) return;
+  state.answered = true;
+  var q = Q[state.i];
+  var ok = wi === q.a;
+  state.picks[state.i] = wi;
+  if (ok) state.score++;
+  el('score').textContent = 'Score ' + state.score;
+
+  var btns = el('options').querySelectorAll('.opt');
+  Array.prototype.forEach.call(btns, function (b) {
+    var v = parseInt(b.dataset.wi, 10);
+    b.disabled = true;
+    if (v === q.a) b.classList.add('correct');
+    else if (v === wi) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+
+  var head = ok ? 'Correct' : 'Not quite. The odd one is “' + q.w[q.a] + '”.';
+  el('feedback').innerHTML = '<div class="feedback ' + (ok ? 'good' : 'bad') + '"><strong>' + head + '</strong><span>' + q.why + '</span></div>';
+
+  var last = state.i === Q.length - 1;
+  var nb = el('next');
+  nb.textContent = last ? 'See my result' : 'Next question';
+  nb.hidden = false;
+  nb.focus();
+}
+
+function next() {
+  if (!state.answered) return;
+  if (state.i === Q.length - 1) { finish(); return; }
+  state.i++;
+  render();
+}
+
+function finish() {
+  var n = (el('name').value || '').trim();
+  el('who').textContent = n ? 'Result for ' + n : 'Your result';
+  el('final').innerHTML = state.score + ' <small>/ ' + Q.length + '</small>';
+  var pct = state.score / Q.length;
+  var m = pct === 1 ? 'Perfect score. Your ear for sounds is excellent.'
+        : pct >= 0.8 ? 'Very good. Check the few you missed below.'
+        : pct >= 0.5 ? 'Good effort. Listen to the missed words again and say them out loud.'
+        : 'Keep practicing. Try again after listening to each word carefully.';
+  el('msg').textContent = m;
+
+  var rv = el('review');
+  rv.innerHTML = '';
+  var missed = [];
+  Q.forEach(function (q, k) { if (state.picks[k] !== q.a) missed.push(k); });
+  if (missed.length) {
+    var h = document.createElement('h2');
+    h.textContent = 'Review your mistakes (' + missed.length + ')';
+    rv.appendChild(h);
+    missed.forEach(function (k) {
+      var q = Q[k];
+      var d = document.createElement('div');
+      d.className = 'miss';
+      d.innerHTML = '<span class="eyebrow">Question ' + (k + 1) + '</span><span class="words"></span><span class="tag">You chose <s></s>. Correct answer: <b></b></span><span class="tag">' + q.why + '</span>';
+      d.querySelector('.words').textContent = q.w.join(', ');
+      d.querySelector('s').textContent = q.w[state.picks[k]];
+      d.querySelector('b').textContent = q.w[q.a];
+      rv.appendChild(d);
+    });
+  }
+  el('fill').style.width = '100%';
+  show('result');
+}
+
+el('go').addEventListener('click', begin);
+el('next').addEventListener('click', next);
+el('again').addEventListener('click', function () { show('start'); });
+document.addEventListener('keydown', function (e) {
+  if (el('quiz').hidden) return;
+  if (e.target && e.target.tagName === 'INPUT') return;
+  if (!state.answered && e.key >= '1' && e.key <= '4') {
+    var wi = state.order[state.i][parseInt(e.key, 10) - 1];
+    choose(wi);
+  } else if (state.answered && e.key === 'Enter') {
+    e.preventDefault();
+    next();
+  }
+});
+</script>
+
+</body></html>
